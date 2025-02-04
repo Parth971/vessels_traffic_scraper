@@ -1,0 +1,8 @@
+botasaurus
+pytz
+chrome_extension_python
+twocaptcha_extension_python
+pydantic-settings
+selenium_wire
+chromedriver_autoinstaller
+filelock
