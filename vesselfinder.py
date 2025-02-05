@@ -44,16 +44,13 @@ def convert_time_format(datetime_str: str) -> str:
 def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
     link = data["link"]
     search_text = data["search_text"]
-    wait_time = 10
+    wait_time = 5
     sleep_time = 2
 
     if driver.config.is_new:
         ScraperLog.debug(f"Opening new driver for search term {search_text}")
-        time.sleep(sleep_time // 2)
-        driver.google_get(link)
+        driver.get(link)
         time.sleep(sleep_time)
-        driver._tab = driver._browser.tabs[0]
-        time.sleep(sleep_time * 2)
 
         btns = driver.select_all(".qc-cmp2-footer button", wait=wait_time)
         for btn in btns:
@@ -69,10 +66,10 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
 
     search_tag.click()
     time.sleep(sleep_time)
-    for idx in range(0, len(search_text), 1):
-        chars = search_text[idx : idx + 1]  # noqa
+    for idx in range(0, len(search_text), 2):
+        chars = search_text[idx : idx + 2]  # noqa
         search_tag.type(chars, wait=wait_time)
-        time.sleep(0.5)
+        time.sleep(0.4)
 
     time.sleep(sleep_time)
 
@@ -86,6 +83,7 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
             and "Container Ship" in result_element.select("div.-JP51").text
         ):
             result_element.click()
+            time.sleep(sleep_time * 2)
             break
     else:
         ScraperLog.warning(f"Not found in result! Skipping {search_text}")
@@ -100,8 +98,6 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
         ScraperLog.debug(f"Other Options: {results}")
         driver.reload()
         return ""
-
-    time.sleep(sleep_time * 2)
 
     html: str = driver.page_html
     return html

@@ -45,10 +45,11 @@ def convert_time_format(datetime_str: str) -> str:
     reuse_driver=True,
     extensions=[TwoCaptchaExtended(api_key=settings.captcha_solver_api_key)],
     proxy=settings.proxy,
-    close_on_crash=False,
+    close_on_crash=True,
     raise_exception=False,
     headless=settings.headless,
     user_agent=UserAgent.RANDOM,
+    block_images_and_css=True,
 )  # type: ignore
 def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
     link = data["link"]
@@ -58,18 +59,24 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
 
     if driver.config.is_new:
         ScraperLog.debug(f"Opening new driver for search term {search_text}")
-        time.sleep(sleep_time // 2)
-        driver.google_get(link)
-        time.sleep(sleep_time)
+        time.sleep(0.2)
+        driver.get_via(
+            link,
+            referer="https://www.marinetraffic.com/en/ais/home/centerx:-12.0/centery:25.0/zoom:4",
+        )
         driver._tab = driver._browser.tabs[0]
         time.sleep(sleep_time * 2)
 
-        time.sleep(sleep_time)
+        btns = driver.select_all(".qc-cmp2-footer button")
+        if len(btns) == 0:
+            time.sleep(sleep_time * 2)
+
         btns = driver.select_all(".qc-cmp2-footer button", wait=wait_time)
         for btn in btns:
             if btn.text.lower() == "agree":
                 ScraperLog.debug("Found Cookie consent button")
-                btn.humane_click()
+                btn.click()
+                time.sleep(sleep_time // 2)
                 break
 
     search_tag = driver.select("#searchMarineTraffic")
@@ -83,12 +90,9 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
         search_tag.type(chars, wait=wait_time)
         time.sleep(0.5)
 
-    time.sleep(sleep_time * 2)
-
     result_elements = driver.select_all(
         "div.MuiList-root.MuiList-padding.css-2bw15n li a"
     )
-
     for result_element in result_elements:
         if (
             result_element.select("span")
@@ -99,34 +103,47 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
             result_element.click()
             break
     else:
-        ScraperLog.warning(f"Not found in result! Skipping {search_text}")
-        results = [
-            [result_element.select("span").text, result_element.select("p").text]
-            for result_element in result_elements
-            if result_element.select("span") and result_element.select("p")
-        ]
-        filename = f"{search_text.lower().replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
-        driver.save_screenshot(filename=filename)
-        ScraperLog.debug(f"Saved screenshot to {filename}")
-        ScraperLog.debug(f"Other Options: {results}")
-        driver.reload()
-        return ""
+        time.sleep(sleep_time * 2)
 
-    driver.is_element_present("#mainSection", wait=wait_time)
-    time.sleep(sleep_time * 2)
+        result_elements = driver.select_all(
+            "div.MuiList-root.MuiList-padding.css-2bw15n li a"
+        )
+        for result_element in result_elements:
+            if (
+                result_element.select("span")
+                and result_element.select("span").text.lower().strip()
+                == search_text.lower().strip()
+                and "Container Ship" in result_element.text
+            ):
+                result_element.click()
+                break
+        else:
+            ScraperLog.warning(f"Not found in result! Skipping {search_text}")
+            results = [
+                [result_element.select("span").text, result_element.select("p").text]
+                for result_element in result_elements
+                if result_element.select("span") and result_element.select("p")
+            ]
+            filename = f"{search_text.lower().replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+            driver.save_screenshot(filename=filename)
+            ScraperLog.debug(f"Saved screenshot to {filename}")
+            ScraperLog.debug(f"Other Options: {results}")
+            driver.reload()
+            return ""
+
+    driver.wait_for_element("#mainSection", wait=wait_time)
+    time.sleep(sleep_time)
 
     if driver.title == "Just a moment...":
         time.sleep(sleep_time)
 
         while driver.title == "Just a moment...":
             ScraperLog.debug("Captcha not solved yet!")
-            time.sleep(sleep_time)
+            time.sleep(3)
 
         time.sleep(sleep_time * 2)
 
-    driver.wait_for_element(
-        "#vesselDetails_voyageSection > div > div.css-qxl29p > div", wait=wait_time
-    )
+    driver.wait_for_element("#vesselDetails_voyageSection > div", wait=wait_time)
     html: str = driver.page_html
     return html
 

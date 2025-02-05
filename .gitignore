@@ -176,3 +176,5 @@ cython_debug/
 error_logs
 logs
 issues.txt
+profiles
+output/
