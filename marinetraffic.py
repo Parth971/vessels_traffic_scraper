@@ -86,7 +86,11 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
         driver.save_screenshot()
         raise Exception("Search tag is missing!")
     search_tag.click()
+
     search_tag = driver.select("#searchMT")
+    if search_tag is None:
+        search_tag = driver.select("#searchMarineTraffic")
+
     for idx in range(0, len(search_text), 2):
         chars = search_text[idx : idx + 2]  # noqa
         search_tag.type(chars, wait=wait_time)
