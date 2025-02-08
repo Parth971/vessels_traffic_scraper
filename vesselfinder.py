@@ -32,7 +32,7 @@ def convert_time_format(datetime_str: str) -> str:
 @browser(
     max_retry=1,
     output=None,
-    reuse_driver=True,
+    reuse_driver=settings.reuse_browser,
     proxy=settings.proxy,
     close_on_crash=True,
     raise_exception=False,

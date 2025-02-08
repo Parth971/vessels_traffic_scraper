@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     headless: bool = Field(default=True, description="Run in headless mode")
     logs_directory: Path = Field(default=BASE_DIR / "logs")
     debug: bool = Field(default=False)
+    reuse_browser: bool = Field(default=False, description="Reuse driver")
 
     class Config:
         env_file = ".env"

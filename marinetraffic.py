@@ -44,7 +44,7 @@ def convert_time_format(datetime_str: str) -> str:
 @browser(
     max_retry=1,
     output=None,
-    reuse_driver=True,
+    reuse_driver=settings.reuse_browser,
     extensions=[TwoCaptchaExtended(api_key=settings.captcha_solver_api_key)],
     proxy=settings.proxy,
     close_on_crash=True,

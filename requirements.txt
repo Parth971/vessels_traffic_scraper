@@ -6,3 +6,5 @@ pydantic-settings
 selenium_wire
 chromedriver_autoinstaller
 filelock
+fastapi
+uvicorn
