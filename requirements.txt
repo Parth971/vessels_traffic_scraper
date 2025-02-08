@@ -7,4 +7,5 @@ selenium_wire
 chromedriver_autoinstaller
 filelock
 fastapi
+gunicorn
 uvicorn
