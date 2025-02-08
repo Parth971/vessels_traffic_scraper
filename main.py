@@ -57,3 +57,4 @@ if __name__ == "__main__":
     result = main(args.terms, args.name)
     assert result is not None
     ScraperLog.info(f"Total Results: {len(result)}")
+    ScraperLog.debug(f"Results: {result}")

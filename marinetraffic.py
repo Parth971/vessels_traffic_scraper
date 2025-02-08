@@ -22,9 +22,11 @@ class TwoCaptchaExtended(TwoCaptcha):  # type: ignore
         super().update_files(api_key)
 
         def update_config_contents(content: str) -> str:
-            key_replaced = content.replace(
-                "autoSubmitForms: false,", "autoSubmitForms: true,"
-            ).replace("autoSolveTurnstile: false,", "autoSolveTurnstile: true,")
+            key_replaced = (
+                content.replace("autoSubmitForms: false,", "autoSubmitForms: true,")
+                .replace("autoSolveTurnstile: false,", "autoSolveTurnstile: true,")
+                .replace("repeatOnErrorTimes: 0,", "repeatOnErrorTimes: 5,")
+            )
 
             return key_replaced
 
