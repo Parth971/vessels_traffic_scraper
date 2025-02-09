@@ -117,7 +117,8 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
     else:
         ScraperLog.warning(f"Not found in result! Skipping {search_text}")
         results = [
-            result.get("value", "") + " " + result.get("desc", "") for result in results
+            result.get("value", "") + " | " + result.get("desc", "")
+            for result in results
         ]
         ScraperLog.debug(f"Other Options: {results}")
         return ""

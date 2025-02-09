@@ -15,6 +15,32 @@ from logger import ScraperLog
 from settings import settings
 
 
+js_script = """
+    function getWorkerData(text, eivn, compId) {
+        return new Promise((resolve, reject) => {
+            const myWorker = window.__gsfworker;
+
+            const handler = (event) => {
+                myWorker.removeEventListener("message", handler); // Cleanup
+                resolve(event.data);  // Resolve the Promise with the worker response
+            };
+
+            myWorker.addEventListener("message", handler);
+
+            // Send request
+            myWorker.postMessage({ cmd: "ms", text, eivn, compId });
+
+            // Optional: Reject if no response in 5 seconds
+            setTimeout(() => {
+                myWorker.removeEventListener("message", handler);
+                reject(new Error("Worker timeout"));
+            }, 5000);
+        });
+    }
+    return getWorkerData(args, "", 123);
+"""
+
+
 def convert_time_format(datetime_str: str) -> str:
     match = re.search(r"([A-Za-z]+ \d{1,2}), (\d{2}:\d{2})", datetime_str)
     if not match:
@@ -53,44 +79,34 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
         time.sleep(sleep_time)
 
         btns = driver.select_all(".qc-cmp2-footer button", wait=wait_time)
+        clicked = False
         for btn in btns:
             if btn.text.lower() == "agree":
                 btn.click()
-                time.sleep(sleep_time // 2)
+                clicked = True
                 break
 
-    search_tag = driver.select('input[name="tsf"]')
-    if search_tag is None:
-        driver.save_screenshot()
-        raise Exception("Search tag is missing!")
+        if clicked:
+            time.sleep(sleep_time // 2)
 
-    search_tag.click()
-    time.sleep(sleep_time)
-    for idx in range(0, len(search_text), 2):
-        chars = search_text[idx : idx + 2]  # noqa
-        search_tag.type(chars, wait=wait_time)
-        time.sleep(0.4)
-
-    time.sleep(sleep_time)
-
-    result_elements = driver.select_all("div.E5ZNs.xaBpY._-0TrM > div > div")
-
-    for result_element in result_elements:
+    response_data = driver.run_js(js_script, search_text)
+    results = response_data.get("list", [])
+    for result in results:
         if (
-            result_element.select("div.Qr4sP")
-            and result_element.select("div.Qr4sP").text.lower().strip()
-            == search_text.lower().strip()
-            and "Container Ship" in result_element.select("div.-JP51").text
+            result.get("type") == "Container Ship"
+            and result.get("name", "").lower() == search_text.lower()
         ):
-            result_element.click()
-            time.sleep(sleep_time * 2)
+            imo = result["imo"]
+            driver.get_via(
+                f"https://www.vesselfinder.com/vessels/details/{imo}",
+                referer=link,
+            )
             break
     else:
         ScraperLog.warning(f"Not found in result! Skipping {search_text}")
         results = [
-            [result_element.select("span").text, result_element.select("p").text]
-            for result_element in result_elements
-            if result_element.select("span") and result_element.select("p")
+            result.get("name", "") + " | " + result.get("type", "")
+            for result in results
         ]
         filename = f"{search_text.lower().replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
         driver.save_screenshot(filename=filename)
@@ -98,6 +114,8 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
         ScraperLog.debug(f"Other Options: {results}")
         driver.reload()
         return ""
+
+    time.sleep(sleep_time)
 
     html: str = driver.page_html
     return html
