@@ -59,12 +59,16 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
     wait_time = 10
     sleep_time = 2
 
+    referer = (
+        "https://www.marinetraffic.com/en/ais/home/centerx:-12.0/centery:25.0/zoom:4"
+    )
+
     if driver.config.is_new:
         ScraperLog.debug(f"Opening new driver for search term {search_text}")
         time.sleep(0.2)
         driver.get_via(
             link,
-            referer="https://www.marinetraffic.com/en/ais/home/centerx:-12.0/centery:25.0/zoom:4",
+            referer=referer,
         )
         driver._tab = driver._browser.tabs[0]
         time.sleep(sleep_time * 2)
@@ -81,63 +85,43 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
                 time.sleep(sleep_time // 2)
                 break
 
-    search_tag = driver.select("#searchMarineTraffic")
-    if search_tag is None:
-        driver.save_screenshot()
-        raise Exception("Search tag is missing!")
-    search_tag.click()
+        driver.reload()
 
-    search_tag = driver.select("#searchMT")
-    if search_tag is None:
-        search_tag = driver.select("#searchMarineTraffic")
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "en-US,en;q=0.9",
+        "priority": "u=1, i",
+        "sec-ch-ua": '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Linux"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        "x-newrelic-id": "undefined",
+        "x-requested-with": "XMLHttpRequest",
+    }
+    url = f"https://www.marinetraffic.com/en/global_search/search?term={search_text}"
+    response = driver.requests.get(url=url, headers=headers, referer=referer)
+    response.raise_for_status()
 
-    for idx in range(0, len(search_text), 2):
-        chars = search_text[idx : idx + 2]  # noqa
-        search_tag.type(chars, wait=wait_time)
-        time.sleep(0.5)
-
-    result_elements = driver.select_all(
-        "div.MuiList-root.MuiList-padding.css-2bw15n li a"
-    )
-    for result_element in result_elements:
-        if (
-            result_element.select("span")
-            and result_element.select("span").text.lower().strip()
-            == search_text.lower().strip()
-            and "Container Ship" in result_element.text
-        ):
-            result_element.click()
+    response_data = response.json()
+    results = response_data.get("results", [])
+    for result in results:
+        if "Container Ship" in result.get("desc", ""):
+            endpoint = result["url"]
+            driver.get_via(
+                f"https://www.marinetraffic.com{endpoint}",
+                referer=link,
+            )
             break
     else:
-        time.sleep(sleep_time * 2)
+        ScraperLog.warning(f"Not found in result! Skipping {search_text}")
+        results = [
+            result.get("value", "") + " " + result.get("desc", "") for result in results
+        ]
+        ScraperLog.debug(f"Other Options: {results}")
+        return ""
 
-        result_elements = driver.select_all(
-            "div.MuiList-root.MuiList-padding.css-2bw15n li a"
-        )
-        for result_element in result_elements:
-            if (
-                result_element.select("span")
-                and result_element.select("span").text.lower().strip()
-                == search_text.lower().strip()
-                and "Container Ship" in result_element.text
-            ):
-                result_element.click()
-                break
-        else:
-            ScraperLog.warning(f"Not found in result! Skipping {search_text}")
-            results = [
-                [result_element.select("span").text, result_element.select("p").text]
-                for result_element in result_elements
-                if result_element.select("span") and result_element.select("p")
-            ]
-            filename = f"{search_text.lower().replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
-            driver.save_screenshot(filename=filename)
-            ScraperLog.debug(f"Saved screenshot to {filename}")
-            ScraperLog.debug(f"Other Options: {results}")
-            driver.reload()
-            return ""
-
-    driver.wait_for_element("#mainSection", wait=wait_time)
     time.sleep(sleep_time)
 
     if driver.title == "Just a moment...":
