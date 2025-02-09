@@ -1,14 +1,22 @@
-from enum import StrEnum
 import time
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+from enum import StrEnum
 from typing import Any, Dict
-from fastapi import FastAPI
+from concurrent.futures import ThreadPoolExecutor
+
 from pydantic import BaseModel
 from main import main
 
+from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi.security.api_key import APIKeyHeader
+from fastapi.responses import RedirectResponse
+
+
 app = FastAPI()
 executor = ThreadPoolExecutor(max_workers=5)
+
+API_KEY = "ilQs2UnK1AMCZfUk822OujYpzokyLtERxhC0DO5F2DlILOAKXXjRWn1ioulbkBjr"
+API_KEY_NAME = "X-API-Key"
 
 
 async def run_scraper_async(terms: list[str], script: str) -> Dict[str, Any]:
@@ -27,8 +35,20 @@ class ScrapeRequest(BaseModel):
     search_term: str = "INTERSEA TRAVELER"
 
 
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=True)
+
+
+def get_api_key(api_key: str = Security(api_key_header)) -> str:
+    """Validates the API key."""
+    if api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid API key")
+    return api_key
+
+
 @app.post("/scrape/")
-async def scrape(request: ScrapeRequest) -> Dict[str, Any]:
+async def scrape(
+    request: ScrapeRequest, api_key: str = Depends(get_api_key)
+) -> Dict[str, Any]:
     """Non-blocking scraper endpoint."""
     start_time = time.time()
 
@@ -41,3 +61,9 @@ async def scrape(request: ScrapeRequest) -> Dict[str, Any]:
         "elapsed_time": elapsed_time,
         "result": result,
     }
+
+
+@app.get("/", include_in_schema=False)
+async def root() -> RedirectResponse:
+    """Redirect to the API documentation."""
+    return RedirectResponse(url="/docs")
