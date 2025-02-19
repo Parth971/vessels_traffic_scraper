@@ -47,7 +47,8 @@ def get_api_key(api_key: str = Security(api_key_header)) -> str:
 
 @app.post("/scrape/")
 async def scrape(
-    request: ScrapeRequest, api_key: str = Depends(get_api_key)
+    request: ScrapeRequest,
+    # api_key: str = Depends(get_api_key),
 ) -> Dict[str, Any]:
     """Non-blocking scraper endpoint."""
     start_time = time.time()
