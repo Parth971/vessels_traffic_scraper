@@ -67,9 +67,9 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> Tuple[str, str]:
     if driver.config.is_new:
         ScraperLog.debug(f"Opening new driver for search term {search_text}")
         time.sleep(0.2)
-        driver.get_via(link, referer=referer)
-        driver._tab = driver._browser.tabs[0]
-        time.sleep(sleep_time * 2)
+        driver.get_via("https://www.marinetraffic.com", referer=referer)
+        # driver._tab = driver._browser.tabs[0]
+        # time.sleep(sleep_time * 2)
 
         # btns = driver.select_all(".qc-cmp2-footer button")
         # if len(btns) == 0:
@@ -99,7 +99,9 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> Tuple[str, str]:
         "x-requested-with": "XMLHttpRequest",
     }
     url = f"https://www.marinetraffic.com/en/global_search/search?term={search_text}"
+    ScraperLog.debug("Requesting...")
     response = driver.requests.get(url=url, headers=headers, referer=referer)
+    ScraperLog.debug("Request completed...")
     response.raise_for_status()
 
     response_data = response.json()
