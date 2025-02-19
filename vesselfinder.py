@@ -2,7 +2,7 @@ import re
 import time
 import traceback
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from bs4 import BeautifulSoup
 
 from botasaurus import bt
@@ -67,7 +67,8 @@ def convert_time_format(datetime_str: str) -> str:
     headless=settings.headless,
     user_agent=UserAgent.RANDOM,
 )  # type: ignore
-def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
+def scrape_html(driver: Driver, data: Dict[str, Any]) -> Tuple[str, str]:
+    detail_page_url = ""
     link = data["link"]
     search_text = data["search_text"]
     wait_time = 5
@@ -97,10 +98,8 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
             and result.get("name", "").lower() == search_text.lower()
         ):
             imo = result["imo"]
-            driver.get_via(
-                f"https://www.vesselfinder.com/vessels/details/{imo}",
-                referer=link,
-            )
+            detail_page_url = f"https://www.vesselfinder.com/vessels/details/{imo}"
+            driver.get_via(detail_page_url, referer=link)
             break
     else:
         ScraperLog.warning(f"Not found in result! Skipping {search_text}")
@@ -113,12 +112,12 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
         ScraperLog.debug(f"Saved screenshot to {filename}")
         ScraperLog.debug(f"Other Options: {results}")
         driver.reload()
-        return ""
+        return "", detail_page_url
 
     time.sleep(sleep_time)
 
     html: str = driver.page_html
-    return html
+    return html, detail_page_url
 
 
 def extract_data(soup: BeautifulSoup) -> Dict[str, Any]:
@@ -193,11 +192,11 @@ def write_to_file(data: List[Dict[str, Any]], result: List[Dict[str, Any]]) -> N
 def scrape_data(data: Dict[str, Any]) -> Dict[str, Any]:
     search_text = data["search_text"]
     ScraperLog.info(f"Scraping vesselfinder for {search_text}")
-    html = scrape_html(data)
+    html, detail_page_url = scrape_html(data)
     try:
         if html == "":
             return {}
-        return extract_data(soupify(html))
+        return {**extract_data(soupify(html)), "url": detail_page_url}
     except Exception:
         ScraperLog.error(traceback.format_exc())
         ScraperLog.error(f"Failed to extract data for {search_text}")

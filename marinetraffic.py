@@ -2,7 +2,7 @@ import time
 import traceback
 import pytz
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from bs4 import BeautifulSoup
 
 from botasaurus import bt
@@ -53,7 +53,8 @@ def convert_time_format(datetime_str: str) -> str:
     user_agent=UserAgent.RANDOM,
     block_images_and_css=True,
 )  # type: ignore
-def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
+def scrape_html(driver: Driver, data: Dict[str, Any]) -> Tuple[str, str]:
+    detail_page_url = ""
     link = data["link"]
     search_text = data["search_text"]
     wait_time = 10
@@ -66,26 +67,23 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
     if driver.config.is_new:
         ScraperLog.debug(f"Opening new driver for search term {search_text}")
         time.sleep(0.2)
-        driver.get_via(
-            link,
-            referer=referer,
-        )
+        driver.get_via(link, referer=referer)
         driver._tab = driver._browser.tabs[0]
         time.sleep(sleep_time * 2)
 
-        btns = driver.select_all(".qc-cmp2-footer button")
-        if len(btns) == 0:
-            time.sleep(sleep_time * 2)
+        # btns = driver.select_all(".qc-cmp2-footer button")
+        # if len(btns) == 0:
+        #     time.sleep(sleep_time * 2)
 
-        btns = driver.select_all(".qc-cmp2-footer button", wait=wait_time)
-        for btn in btns:
-            if btn.text.lower() == "agree":
-                ScraperLog.debug("Found Cookie consent button")
-                btn.click()
-                time.sleep(sleep_time // 2)
-                break
+        # btns = driver.select_all(".qc-cmp2-footer button", wait=wait_time)
+        # for btn in btns:
+        #     if btn.text.lower() == "agree":
+        #         ScraperLog.debug("Found Cookie consent button")
+        #         btn.click()
+        #         time.sleep(sleep_time // 2)
+        #         break
 
-        driver.reload()
+        # driver.reload()
 
     headers = {
         "accept": "application/json, text/plain, */*",
@@ -109,10 +107,8 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
     for result in results:
         if "Container Ship" in result.get("desc", ""):
             endpoint = result["url"]
-            driver.get_via(
-                f"https://www.marinetraffic.com{endpoint}",
-                referer=link,
-            )
+            detail_page_url = f"https://www.marinetraffic.com{endpoint}"
+            driver.get_via(detail_page_url, referer=link)
             break
     else:
         ScraperLog.warning(f"Not found in result! Skipping {search_text}")
@@ -121,7 +117,7 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
             for result in results
         ]
         ScraperLog.debug(f"Other Options: {results}")
-        return ""
+        return "", detail_page_url
 
     time.sleep(sleep_time)
 
@@ -136,7 +132,7 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> str:
 
     driver.wait_for_element("#vesselDetails_voyageSection > div", wait=wait_time)
     html: str = driver.page_html
-    return html
+    return html, detail_page_url
 
 
 def extract_data(soup: BeautifulSoup) -> Dict[str, Any]:
@@ -217,11 +213,11 @@ def write_to_file(data: List[Dict[str, Any]], result: List[Dict[str, Any]]) -> N
 def scrape_data(data: Dict[str, Any]) -> Dict[str, Any]:
     search_text = data["search_text"]
     ScraperLog.info(f"Scraping marinetraffic for {search_text}")
-    html = scrape_html(data)
+    html, detail_page_url = scrape_html(data)
     try:
         if html == "":
             return {}
-        return extract_data(soupify(html))
+        return {**extract_data(soupify(html)), "url": detail_page_url}
     except Exception:
         ScraperLog.error(traceback.format_exc())
         ScraperLog.error(f"Failed to extract data for {search_text}")
