@@ -102,17 +102,22 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> Tuple[str, str]:
             driver.get_via(detail_page_url, referer=link)
             break
     else:
-        ScraperLog.warning(f"Not found in result! Skipping {search_text}")
-        results = [
-            result.get("name", "") + " | " + result.get("type", "")
-            for result in results
-        ]
-        filename = f"{search_text.lower().replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
-        driver.save_screenshot(filename=filename)
-        ScraperLog.debug(f"Saved screenshot to {filename}")
-        ScraperLog.debug(f"Other Options: {results}")
-        driver.reload()
-        return "", detail_page_url
+        if len(results) == 1:
+            imo = results[0]["imo"]
+            detail_page_url = f"https://www.vesselfinder.com/vessels/details/{imo}"
+            driver.get_via(detail_page_url, referer=link)
+        else:
+            ScraperLog.warning(f"Not found in result! Skipping {search_text}")
+            results = [
+                result.get("name", "") + " | " + result.get("type", "")
+                for result in results
+            ]
+            filename = f"{search_text.lower().replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+            driver.save_screenshot(filename=filename)
+            ScraperLog.debug(f"Saved screenshot to {filename}")
+            ScraperLog.debug(f"Other Options: {results}")
+            driver.reload()
+            return "", detail_page_url
 
     time.sleep(sleep_time)
 
@@ -188,6 +193,7 @@ def write_to_file(data: List[Dict[str, Any]], result: List[Dict[str, Any]]) -> N
     create_error_logs=False,
     parallel=settings.parallel,
     raise_exception=True,
+    max_retry=1,
 )  # type: ignore
 def scrape_data(data: Dict[str, Any]) -> Dict[str, Any]:
     search_text = data["search_text"]

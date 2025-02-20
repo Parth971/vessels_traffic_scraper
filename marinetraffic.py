@@ -113,13 +113,18 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> Tuple[str, str]:
             driver.get_via(detail_page_url, referer=link)
             break
     else:
-        ScraperLog.warning(f"Not found in result! Skipping {search_text}")
-        results = [
-            result.get("value", "") + " | " + result.get("desc", "")
-            for result in results
-        ]
-        ScraperLog.debug(f"Other Options: {results}")
-        return "", detail_page_url
+        if len(results) == 1:
+            endpoint = results[0]["url"]
+            detail_page_url = f"https://www.marinetraffic.com{endpoint}"
+            driver.get_via(detail_page_url, referer=link)
+        else:
+            ScraperLog.warning(f"Not found in result! Skipping {search_text}")
+            results = [
+                result.get("value", "") + " | " + result.get("desc", "")
+                for result in results
+            ]
+            ScraperLog.debug(f"Other Options: {results}")
+            return "", detail_page_url
 
     time.sleep(sleep_time)
 
@@ -211,6 +216,7 @@ def write_to_file(data: List[Dict[str, Any]], result: List[Dict[str, Any]]) -> N
     create_error_logs=False,
     parallel=settings.parallel,
     raise_exception=False,
+    max_retry=1,
 )  # type: ignore
 def scrape_data(data: Dict[str, Any]) -> Dict[str, Any]:
     search_text = data["search_text"]
