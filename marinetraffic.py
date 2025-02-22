@@ -216,7 +216,7 @@ def write_to_file(data: List[Dict[str, Any]], result: List[Dict[str, Any]]) -> N
     create_error_logs=False,
     parallel=settings.parallel,
     raise_exception=False,
-    max_retry=1,
+    max_retry=2,
 )  # type: ignore
 def scrape_data(data: Dict[str, Any]) -> Dict[str, Any]:
     search_text = data["search_text"]
