@@ -61,7 +61,7 @@ def convert_time_format(datetime_str: str) -> str:
     reuse_driver=settings.reuse_browser,
     proxy=settings.proxy,
     close_on_crash=True,
-    raise_exception=False,
+    raise_exception=True,
     block_images_and_css=True,
     wait_for_complete_page_load=False,
     headless=settings.headless,
@@ -199,14 +199,9 @@ def scrape_data(data: Dict[str, Any]) -> Dict[str, Any]:
     search_text = data["search_text"]
     ScraperLog.info(f"Scraping vesselfinder for {search_text}")
     html, detail_page_url = scrape_html(data)
-    try:
-        if html == "":
-            return {}
-        return {**extract_data(soupify(html)), "url": detail_page_url}
-    except Exception:
-        ScraperLog.error(traceback.format_exc())
-        ScraperLog.error(f"Failed to extract data for {search_text}")
+    if html == "":
         return {}
+    return {**extract_data(soupify(html)), "url": detail_page_url}
 
 
 def scrape_vesselfinder(data: List[Dict[str, str]]) -> List[Dict[str, Any]]:

@@ -1,5 +1,4 @@
 import time
-import traceback
 import pytz
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
@@ -48,7 +47,7 @@ def convert_time_format(datetime_str: str) -> str:
     extensions=[TwoCaptchaExtended(api_key=settings.captcha_solver_api_key)],
     proxy=settings.proxy,
     close_on_crash=True,
-    raise_exception=False,
+    raise_exception=True,
     headless=settings.headless,
     user_agent=UserAgent.RANDOM,
     block_images_and_css=True,
@@ -137,7 +136,9 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> Tuple[str, str]:
 
         time.sleep(sleep_time * 2)
 
-    driver.wait_for_element("#vesselDetails_voyageSection > div", wait=wait_time)
+    driver.wait_for_element(
+        "#vesselDetails_voyageSection > div > div.css-qxl29p > div", wait=wait_time
+    )
     html: str = driver.page_html
     return html, detail_page_url
 
@@ -215,21 +216,16 @@ def write_to_file(data: List[Dict[str, Any]], result: List[Dict[str, Any]]) -> N
     close_on_crash=True,
     create_error_logs=False,
     parallel=settings.parallel,
-    raise_exception=False,
-    max_retry=2,
+    raise_exception=True,
+    max_retry=1,
 )  # type: ignore
 def scrape_data(data: Dict[str, Any]) -> Dict[str, Any]:
     search_text = data["search_text"]
     ScraperLog.info(f"Scraping marinetraffic for {search_text}")
     html, detail_page_url = scrape_html(data)
-    try:
-        if html == "":
-            return {}
-        return {**extract_data(soupify(html)), "url": detail_page_url}
-    except Exception:
-        ScraperLog.error(traceback.format_exc())
-        ScraperLog.error(f"Failed to extract data for {search_text}")
+    if html == "":
         return {}
+    return {**extract_data(soupify(html)), "url": detail_page_url}
 
 
 def scrape_marinetraffic(data: List[Dict[str, str]]) -> List[Dict[str, Any]]:
