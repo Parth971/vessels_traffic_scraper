@@ -112,10 +112,12 @@ def scrape_html(driver: Driver, data: Dict[str, Any]) -> Tuple[str, str]:
             driver.get_via(detail_page_url, referer=link)
             break
     else:
-        if len(results) == 1:
-            endpoint = results[0]["url"]
-            detail_page_url = f"https://www.marinetraffic.com{endpoint}"
-            driver.get_via(detail_page_url, referer=link)
+        if len(results) >= 1:
+            for result in results:
+                endpoint = result["url"]
+                detail_page_url = f"https://www.marinetraffic.com{endpoint}"
+                driver.get_via(detail_page_url, referer=link)
+                break
         else:
             ScraperLog.warning(f"Not found in result! Skipping {search_text}")
             results = [
