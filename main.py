@@ -3,7 +3,8 @@ from typing import Any, Dict, List, Optional
 
 from logger import ScraperLog
 from marinetraffic import scrape_marinetraffic
-from utils import timetracker
+
+# from utils import timetracker
 from vesselfinder import scrape_vesselfinder
 
 

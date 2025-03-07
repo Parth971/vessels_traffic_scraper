@@ -2,15 +2,17 @@ from contextlib import asynccontextmanager
 import time
 import asyncio
 from enum import StrEnum
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from concurrent.futures import ProcessPoolExecutor
 
+# import psutil
 from pydantic import BaseModel
 from main import main
 
 from fastapi import FastAPI, HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.responses import RedirectResponse
+
 
 executor = ProcessPoolExecutor(max_workers=2)
 
@@ -22,14 +24,23 @@ async def lifespan(app: FastAPI) -> Any:
     executor.shutdown(wait=True)
 
 
+# def kill_node_processes() -> None:
+#     """Find and kill any lingering Node.js processes."""
+#     for proc in psutil.process_iter(attrs=["pid", "name"]):
+#         if "node" in proc.info["name"]:
+#             proc.kill()
+
+
 app = FastAPI(lifespan=lifespan)
 
 API_KEY = "ilQs2UnK1AMCZfUk822OujYpzokyLtERxhC0DO5F2DlILOAKXXjRWn1ioulbkBjr"
 API_KEY_NAME = "X-API-Key"
 
 
-async def run_scraper_async(terms: list[str], script: str) -> Dict[str, Any]:
-    """Run the scraper asynchronously using ThreadPoolExecutor."""
+async def run_scraper_async(
+    terms: list[str], script: str
+) -> Optional[List[Dict[str, Any]]]:
+    """Run the scraper asynchronously using ProcessPoolExecutor."""
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(executor, main, terms, script)
 
@@ -62,15 +73,21 @@ async def scrape(
     """Non-blocking scraper endpoint."""
     start_time = time.time()
 
-    result = await run_scraper_async([request.search_term], request.script)
+    try:
+        result = await run_scraper_async([request.search_term], request.script)
+        end_time = time.time()
+        elapsed_time = round(end_time - start_time, 2)
 
-    end_time = time.time()
-    elapsed_time = round(end_time - start_time, 2)
+        return {
+            "elapsed_time": elapsed_time,
+            "result": result,
+        }
+    except Exception as e:
+        raise e
+    finally:
+        from javascript_fixes.connection import stop
 
-    return {
-        "elapsed_time": elapsed_time,
-        "result": result,
-    }
+        stop()
 
 
 @app.get("/", include_in_schema=False)
