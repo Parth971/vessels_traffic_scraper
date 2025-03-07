@@ -14,9 +14,6 @@ from fastapi.security.api_key import APIKeyHeader
 from fastapi.responses import RedirectResponse
 
 
-executor = ProcessPoolExecutor(max_workers=2)
-
-
 # @asynccontextmanager
 # async def lifespan(app: FastAPI) -> Any:
 #     """Setup and cleanup executor on FastAPI startup/shutdown."""
@@ -38,7 +35,7 @@ API_KEY_NAME = "X-API-Key"
 
 
 async def run_scraper_async(
-    terms: list[str], script: str
+    terms: list[str], script: str, executor: ProcessPoolExecutor
 ) -> Optional[List[Dict[str, Any]]]:
     """Run the scraper asynchronously using ProcessPoolExecutor."""
     loop = asyncio.get_running_loop()
@@ -72,9 +69,12 @@ async def scrape(
 ) -> Dict[str, Any]:
     """Non-blocking scraper endpoint."""
     start_time = time.time()
+    executor = ProcessPoolExecutor(max_workers=1)
 
     try:
-        result = await run_scraper_async([request.search_term], request.script)
+        result = await run_scraper_async(
+            [request.search_term], request.script, executor
+        )
         end_time = time.time()
         elapsed_time = round(end_time - start_time, 2)
 
