@@ -1,6 +1,5 @@
 import re
 import time
-import traceback
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 from bs4 import BeautifulSoup

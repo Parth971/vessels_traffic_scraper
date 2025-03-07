@@ -7,6 +7,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 # import psutil
 from pydantic import BaseModel
+from logger import ScraperLog
 from main import main
 
 from fastapi import FastAPI, HTTPException, Security
@@ -87,8 +88,10 @@ async def scrape(
     finally:
         from javascript_fixes.connection import stop
 
+        ScraperLog.debug("Shutting down executor")
         stop()
         executor.shutdown(wait=True)
+        ScraperLog.debug("Executor shut down")
 
 
 @app.get("/", include_in_schema=False)
