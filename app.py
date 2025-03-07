@@ -1,19 +1,28 @@
+from contextlib import asynccontextmanager
 import time
 import asyncio
 from enum import StrEnum
 from typing import Any, Dict
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 
 from pydantic import BaseModel
 from main import main
 
-from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi import FastAPI, HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.responses import RedirectResponse
 
+executor = ProcessPoolExecutor(max_workers=2)
 
-app = FastAPI()
-executor = ThreadPoolExecutor(max_workers=5)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> Any:
+    """Setup and cleanup executor on FastAPI startup/shutdown."""
+    yield  # API runs here
+    executor.shutdown(wait=True)  # Ensures all processes/threads are closed
+
+
+app = FastAPI(lifespan=lifespan)
 
 API_KEY = "ilQs2UnK1AMCZfUk822OujYpzokyLtERxhC0DO5F2DlILOAKXXjRWn1ioulbkBjr"
 API_KEY_NAME = "X-API-Key"
