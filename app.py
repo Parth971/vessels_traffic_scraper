@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+# from contextlib import asynccontextmanager
 import time
 import asyncio
 from enum import StrEnum
@@ -17,11 +17,11 @@ from fastapi.responses import RedirectResponse
 executor = ProcessPoolExecutor(max_workers=2)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> Any:
-    """Setup and cleanup executor on FastAPI startup/shutdown."""
-    yield
-    executor.shutdown(wait=True)
+# @asynccontextmanager
+# async def lifespan(app: FastAPI) -> Any:
+#     """Setup and cleanup executor on FastAPI startup/shutdown."""
+#     yield
+#     executor.shutdown(wait=True)
 
 
 # def kill_node_processes() -> None:
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI) -> Any:
 #             proc.kill()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 API_KEY = "ilQs2UnK1AMCZfUk822OujYpzokyLtERxhC0DO5F2DlILOAKXXjRWn1ioulbkBjr"
 API_KEY_NAME = "X-API-Key"
@@ -88,6 +88,7 @@ async def scrape(
         from javascript_fixes.connection import stop
 
         stop()
+        executor.shutdown(wait=True)
 
 
 @app.get("/", include_in_schema=False)
