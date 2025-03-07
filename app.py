@@ -18,8 +18,8 @@ executor = ProcessPoolExecutor(max_workers=2)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     """Setup and cleanup executor on FastAPI startup/shutdown."""
-    yield  # API runs here
-    executor.shutdown(wait=True)  # Ensures all processes/threads are closed
+    yield
+    executor.shutdown(wait=True)
 
 
 app = FastAPI(lifespan=lifespan)

@@ -24,7 +24,7 @@ def run_marinetraffic(terms: List[str]) -> List[Dict[str, Any]]:
     return scrape_marinetraffic(data_items)
 
 
-@timetracker
+# @timetracker
 def main(terms: List[str], script: str) -> Optional[List[Dict[str, Any]]]:
     if script == "vesselfinder":
         result = run_vesselfinder(terms)
