@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Any, Dict, List, Optional
 from concurrent.futures import ProcessPoolExecutor
 
-# import psutil
+import psutil
 from pydantic import BaseModel
 from logger import ScraperLog
 from main import main
@@ -22,11 +22,19 @@ from fastapi.responses import RedirectResponse
 #     executor.shutdown(wait=True)
 
 
-# def kill_node_processes() -> None:
-#     """Find and kill any lingering Node.js processes."""
-#     for proc in psutil.process_iter(attrs=["pid", "name"]):
-#         if "node" in proc.info["name"]:
-#             proc.kill()
+def kill_bridge_js_processes() -> None:
+    """Find and terminate Node.js processes running bridge.js specifically."""
+    for proc in psutil.process_iter(attrs=["pid", "name", "cmdline"]):
+        try:
+            cmdline = proc.info["cmdline"]
+            if cmdline and any("bridge.js" in arg for arg in cmdline):
+                proc.terminate()  # Graceful shutdown
+                proc.wait(timeout=5)  # Wait up to 5 seconds before force-killing
+                if proc.is_running():  # If still running, force kill
+                    proc.kill()
+                print(f"Killed bridge.js process (PID: {proc.info['pid']})")
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue  # Process already gone or no permission to access
 
 
 app = FastAPI()
@@ -86,10 +94,8 @@ async def scrape(
     except Exception as e:
         raise e
     finally:
-        from javascript_fixes.connection import stop
-
         ScraperLog.debug("Shutting down executor")
-        stop()
+        kill_bridge_js_processes()
         executor.shutdown(wait=True)
         ScraperLog.debug("Executor shut down")
 
