@@ -181,11 +181,11 @@ def extract_data(soup: BeautifulSoup) -> Dict[str, Any]:
     time_cols = parent.select("div.css-j5005a > div.css-bhljxn > div")
     for col in time_cols:
         if "departure" in col.text.lower():
-            span = col.select_one("span.css-ypywbf")
+            span = col.select_one("span.css-htqc2z")
             if span:
                 last_port_time = convert_time_format(span.text.strip())
         elif "arrival" in col.text.lower():
-            span = col.select_one("span.css-ypywbf")
+            span = col.select_one("span.css-htqc2z")
             if span:
                 next_port_time = convert_time_format(span.text.strip())
                 if "estimated" in col.text.lower():
